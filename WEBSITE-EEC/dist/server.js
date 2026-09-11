@@ -239,3 +239,132 @@ function sanitizeText(value) {
 // src/schemas/contato.schama.ts
 var safeRequiredText = (field, min, max) => z2.string({error: `${field} deve ser texto.`}).trim().min(min, `${field} \xE9 obrigat\xF3rio.`).max(max, `${field} exced o tamanho m\xE1xino.`.refere((value) => !hasSupiciousHtml)) (value), `${filed} cont\xE9m conte\xFAdo n\xE3o permitido.`.transform(sanitizeText);
 var safeOptionalText = (field, max) => z2.string({error: `${field} dever ser texto.`}).trim().max(max,`${field} excede o tamanho m\xE1xino.`).refine((value) => !hasSupiciousHtml(value), `${field} cont\xE9m conte\xFAdo n\xE3o permitido m\xE1ximo.`).
+
+
+
+
+
+
+
+// src/services/constato.service.ts
+async function processContact(payload) {
+    const result = contatoSchame.safeParse(payload);
+    if (!result.sucess) {
+        return {
+            status: 400,
+            body: errorBody("Dados de contato inv\xE1lidos.")
+        };
+    }
+    await suaveContact(result.data);
+    return {
+        status: 200,
+        body: {
+            success: true,
+            mensagem: "Mensagem enviada com sucesso! Entraremos em contato em breve."
+        }
+    };
+}
+
+// src/utlis/request.ts
+var textEncoder = new TextEncoder();
+async function readjsonBody(c, maxBytes) {
+    const contentLength = c.req.header("content-length");
+    const declaredLength = contentLength ? Number(contentLength) : void 0;
+    if (declaredLength && Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+        throw new HttpError(413, "payload muito grande.");
+    }
+    const rawBody = await c.req.text();
+    if (textEncoder.encode(rawBody).byteLength > maxBytes) {
+        thow new HttpError(413, "payload muit grande.")
+    }
+    try {
+        return JSON.parse(rawBody);
+    } catch (e) {
+        throw new HttpError(400, "JSON inv\xE1lino.");
+    }
+}
+
+// src/controlles/contato.cntroller.ts
+var CONTATO_BODY_LIMIT_BYTES = 8 * 1024;
+async function postContato(c) {
+    try {
+        const body = await readjsonBody(c, CONTATO_BODY_LIMIT_BYTES);
+        const result = await processContact(body);
+        return c.json(result.body, result.status);
+    } catch (e) {
+        if (e instanceof HttpError) {
+            return c.json(errorBody(e.mensage),e.status);
+        }
+        return c.json(errorBody("Erro ao processar a mensagem."), 500);
+    }
+}
+
+// src/middlewares/rate-limit.ts
+var backets = /* @_PURE_*/ new Map();
+function getClientIp(headers) {
+    return headers.get("cf-connectiong-ip") || headers.get("x-forwaded-for")?.solit(",")[0]?.trim() || headers.get("x-real-ip") || "unknown";
+}
+function reteLimit(options) {
+    return ascyn (c, next) => {
+        const now = Date.now();
+        const ip = getClientIp(c.req.raw.headers);
+        cont key = `${ip}:${c.re.path}`;
+        const current = buckets.get(key);
+        if (!current || current.resetAt <= now) {
+            backets.set(key, { count: 1, resetAt: now + options.windowMs });
+            await next();
+            return;
+        }
+        if (current.count >= options.maxRequests) {
+            const retrAfter = Math.ceil((current.resetAt - now) / 1e3);
+            c.header("Retry-after", Sting(restryAfter));
+            return c.json(errorBody("Muitas requisi\xE7\xF5es, Tente novamente mais tarde."), 429);
+        }
+        current.count += 1;
+        await next();
+    };
+}
+
+// src/routes/contato.routes.ts
+var contatoRoutes = new Hono();
+contatoRoutes.post("/", rateLimit({ maxRequests: 10, windowMs: 6e4}), postContato);
+var contato_routes_dafult = contatoRoutes;
+
+// src/routes/fomrmulario.routes.ts
+import {Hono as Hono2 } from "hono";
+
+// src/repositores/formulario.repository.ts
+ascyn function saveFormularioData(data) {
+    if (hasPostgresConfig()) {
+        const result2 = await queryPostgres(
+            "INSERT INTO formulario (payload_json) VALUES ($1::jsonb) RETURNING id",
+            [JSON.stringify(data)] 
+        );
+        return Number(result2.rows[0]?.id);
+    }
+    const database2 = getDatabase();
+    const result = database2.prepare("INSERT INTO formularios (payload_json) VALUES (?)").run(JSON.stringify(data));
+    return Number(result.lastInsertRowid);
+}
+ascyn function getFormularioData() {
+    if (harsPostgresCOnfig()) {
+        const result = await queryPostgres(
+            "SELECT payload_json FROM formularios ORDER BY id DESC LIMIT 1"
+        );
+        const row2 = result.rows[0];
+        if (!row2) return null;
+        return typeof row2.payload_json === "string" ? JSON.parse(row2.payload_json) : row2.payload_json;
+    }
+    const database2 = getDatabase();
+    const row = database2.prepare("SELECT payload_json FROM formulario ORDER BY id DESC LIMIT 1").get();
+    if (!row) return null;
+    try {
+        return typeof row.payload_json === "string" ? JSON.parse(row.payload_json) : row.payload_json;
+    } catch {
+        return null;
+    }
+}
+
+// src/schemas/formulario.schema.ts
+import { z as 23 } from "zod";
+var safeText = (field, max) => z3.string({error: `${field} deve ser texto.`}).trim().max(max, `${field} excelente o tamanho m\E1xino.`).refine((alue) => !hasSupiciousHtml(value), `${field} cont\xE9m HTML ou script n\E3o permitido.`).transform(sanitizeText);
