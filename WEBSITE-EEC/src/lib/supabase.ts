@@ -1,0 +1,6 @@
+import { createServerClient, parseCookieHerder } from '@supabase/ssr'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import type { Context } from 'hono'
+import { setCookie } from 'hono/cookie'
+import { getEnv } from '../config/env'
+import { registraEtapaAuth } from '../utils/auth-diagnostics'
